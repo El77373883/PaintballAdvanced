@@ -2,6 +2,7 @@ package com.soyadrianyt001.advancedpaintball.managers;
 
 import com.soyadrianyt001.advancedpaintball.AdvancedPaintball;
 import com.soyadrianyt001.advancedpaintball.utils.Msg;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -16,16 +17,11 @@ public class ClanManager {
     private File file;
     private FileConfiguration cfg;
 
-    // clan name -> list of UUIDs
-    private final Map<String, List<UUID>> clans       = new HashMap<>();
-    // clan name -> owner UUID
-    private final Map<String, UUID> clanOwners        = new HashMap<>();
-    // player UUID -> clan name
-    private final Map<UUID, String> playerClan        = new HashMap<>();
-    // clan name -> tag
-    private final Map<String, String> clanTags        = new HashMap<>();
-    // pending invites: invitedUUID -> clanName
-    private final Map<UUID, String> pendingInvites    = new HashMap<>();
+    private final Map<String, List<UUID>> clans    = new HashMap<>();
+    private final Map<String, UUID> clanOwners     = new HashMap<>();
+    private final Map<UUID, String> playerClan     = new HashMap<>();
+    private final Map<String, String> clanTags     = new HashMap<>();
+    private final Map<UUID, String> pendingInvites = new HashMap<>();
 
     public ClanManager(AdvancedPaintball plugin) {
         this.plugin = plugin;
@@ -173,7 +169,7 @@ public class ClanManager {
         p.sendMessage(Msg.c("  &b&lClan: &f" + clan + " &8[&e" + tag + "&8]"));
         p.sendMessage(Msg.c("  &7Miembros: &f" + members.size()));
         members.forEach(uid -> {
-            org.bukkit.OfflinePlayer op = org.bukkit.Bukkit.getOfflinePlayer(uid);
+            org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayer(uid);
             boolean isOwner = clanOwners.get(clan).equals(uid);
             boolean online  = op.isOnline();
             p.sendMessage(Msg.c("  " + (isOwner ? "&6👑 " : "&7• ")
@@ -183,15 +179,17 @@ public class ClanManager {
         p.sendMessage(Msg.sep());
     }
 
+    // ── Broadcast interno ─────────────────────────────────────────────────────
+
     private void broadcastClan(String clan, String msg) {
         clans.getOrDefault(clan, new ArrayList<>()).forEach(uid -> {
-            org.bukkit.Player pl = org.bukkit.Bukkit.getPlayer(uid);
+            Player pl = Bukkit.getPlayer(uid);
             if (pl != null) pl.sendMessage(msg);
         });
     }
 
-    public String getClan(Player p) { return playerClan.get(p.getUniqueId()); }
-    public boolean inClan(Player p) { return playerClan.containsKey(p.getUniqueId()); }
-    public String getTag(String clan) { return clanTags.getOrDefault(clan.toLowerCase(), "???"); }
-    public Map<String, List<UUID>> getClans() { return clans; }
+    public String getClan(Player p)              { return playerClan.get(p.getUniqueId()); }
+    public boolean inClan(Player p)              { return playerClan.containsKey(p.getUniqueId()); }
+    public String getTag(String clan)            { return clanTags.getOrDefault(clan.toLowerCase(), "???"); }
+    public Map<String, List<UUID>> getClans()    { return clans; }
 }
