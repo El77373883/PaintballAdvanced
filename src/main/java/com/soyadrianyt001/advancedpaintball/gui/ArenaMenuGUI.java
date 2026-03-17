@@ -1,8 +1,7 @@
 package com.soyadrianyt001.advancedpaintball.gui;
 
 import com.soyadrianyt001.advancedpaintball.AdvancedPaintball;
-import com.soyadrianyt001.advancedpaintball.models.Arena;
-import com.soyadrianyt001.advancedpaintball.models.Game;
+import com.soyadrianyt001.advancedpaintball.models.PlayerStats;
 import com.soyadrianyt001.advancedpaintball.utils.Msg;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -11,78 +10,156 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 
-public class ArenaMenuGUI implements Listener {
+public class MainMenuGUI implements Listener {
 
     private final AdvancedPaintball plugin;
-    private static final String TITLE = "§b§lAdvancedPaintball §8▸ Arenas";
+    private static final String TITLE = "§b§lAdvancedPaintball §8▸ Menú";
 
-    public ArenaMenuGUI(AdvancedPaintball plugin) { this.plugin = plugin; }
+    // Animación del título
+    private final Map<UUID, BukkitTask> animations = new HashMap<>();
 
-    public void open(Player p) {
-        // Solo arenas que el admin activó como visibles
-        Collection<Arena> arenas = plugin.getArenaManager().visible();
-
-        if (arenas.isEmpty()) {
-            p.sendMessage(Msg.info("No hay arenas disponibles en este momento."));
-            return;
-        }
-
-        int size = Math.max(9, (int)(Math.ceil(arenas.size() / 9.0)) * 9);
-        if (size > 54) size = 54;
-        Inventory inv = Bukkit.createInventory(null, size, TITLE);
-
-        int slot = 0;
-        for (Arena a : arenas) {
-            if (slot >= size - 9) break;
-            inv.setItem(slot++, arenaItem(a));
-        }
-
-        // Relleno
-        ItemStack glass = make(Material.GRAY_STAINED_GLASS_PANE, " ", null);
-        for (int i = 0; i < size; i++) if (inv.getItem(i) == null) inv.setItem(i, glass);
-
-        // Tienda solo si está en una arena
-        if (plugin.getGameManager().inGame(p)) {
-            inv.setItem(size - 1, make(Material.CHEST,
-                Msg.c("&6&l☆ Tienda de Kits"),
-                Arrays.asList(
-                    Msg.c("&7Compra y cambia tu kit"),
-                    Msg.c("&eClick para abrir")
-                )));
-        }
-
-        p.openInventory(inv);
-        p.playSound(p.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
+    public MainMenuGUI(AdvancedPaintball plugin) {
+        this.plugin = plugin;
     }
 
-    private ItemStack arenaItem(Arena a) {
-        Game game    = plugin.getGameManager().getGameByArena(a.getName());
-        boolean active = game != null && game.getState() == Game.State.IN_GAME;
-        int current  = game != null ? game.totalActive() : 0;
-        String status = active ? "&cEn juego" : "&aEsperando jugadores...";
+    public void open(Player p) {
+        PlayerStats stats = plugin.getStatsManager().get(p);
+        String rank = plugin.getRankManager().getFormattedRank(stats);
 
-        // Detectar modo
-        String modo = current <= 2 ? "1v1" : current <= 4 ? "2v2" : current <= 6 ? "3v3" : "4v4";
+        Inventory inv = Bukkit.createInventory(null, 54, TITLE);
 
-        Material mat = active ? Material.RED_WOOL : Material.GREEN_WOOL;
-        List<String> lore = new ArrayList<>();
-        lore.add(Msg.c("&8&m──────────────────"));
-        lore.add(Msg.c("&7Estado:    " + status));
-        lore.add(Msg.c("&7Jugadores: &f" + current + "&7/&f" + a.getMaxPlayers()));
-        lore.add(Msg.c("&7Modo:      &e" + modo));
-        lore.add(Msg.c("&7Tiempo:    &e5 minutos"));
-        lore.add(Msg.c("&7Kills win: &e" + a.getKillsToWin()));
-        lore.add(Msg.c("&8&m──────────────────"));
-        if (!active) {
-            lore.add(Msg.c("&a▶ Click para unirte"));
-            lore.add(Msg.c("&b▶ Shift+Click para observar"));
-        } else {
-            lore.add(Msg.c("&b▶ Click para observar"));
+        // Fondo animado
+        ItemStack bg = make(Material.BLACK_STAINED_GLASS_PANE, " ", null);
+        for (int i = 0; i < 54; i++) inv.setItem(i, bg);
+
+        // Bordes de color
+        ItemStack border = make(Material.CYAN_STAINED_GLASS_PANE, " ", null);
+        for (int i = 0; i < 9; i++) inv.setItem(i, border);
+        for (int i = 45; i < 54; i++) inv.setItem(i, border);
+        for (int i = 0; i < 54; i += 9) inv.setItem(i, border);
+        for (int i = 8; i < 54; i += 9) inv.setItem(i, border);
+
+        // Perfil del jugador
+        inv.setItem(4, make(Material.PLAYER_HEAD,
+            Msg.c("&f&l" + p.getName()),
+            Arrays.asList(
+                Msg.c("&8&m──────────────────"),
+                Msg.c("&7Rango: " + rank),
+                Msg.c("&7Nivel: &e" + stats.getLevel()),
+                Msg.c("&6Coins: &e" + stats.getCoins()),
+                Msg.c("&7Kills: &a" + stats.getKills()),
+                Msg.c("&7Victorias: &b" + stats.getWins()),
+                Msg.c("&7KDR: &f" + stats.kdr()),
+                Msg.c("&8&m──────────────────")
+            )));
+
+        // Jugar
+        inv.setItem(20, make(Material.LIME_CONCRETE,
+            Msg.c("&a&l▶ JUGAR"),
+            Arrays.asList(
+                Msg.c("&7Únete a una partida"),
+                Msg.c("&7de AdvancedPaintball"),
+                Msg.c("&8&m──────────────────"),
+                Msg.c("&eClick para ver arenas")
+            )));
+
+        // Tienda
+        inv.setItem(22, make(Material.CHEST,
+            Msg.c("&6&l☆ TIENDA"),
+            Arrays.asList(
+                Msg.c("&7Compra kits y mejoras"),
+                Msg.c("&6Coins: &e" + stats.getCoins()),
+                Msg.c("&8&m──────────────────"),
+                Msg.c("&eClick para abrir")
+            )));
+
+        // Stats
+        inv.setItem(24, make(Material.BOOK,
+            Msg.c("&b&l📊 ESTADÍSTICAS"),
+            Arrays.asList(
+                Msg.c("&8&m──────────────────"),
+                Msg.c("&7Kills:     &a" + stats.getKills()),
+                Msg.c("&7Muertes:   &c" + stats.getDeaths()),
+                Msg.c("&7KDR:       &f" + stats.kdr()),
+                Msg.c("&7Victorias: &b" + stats.getWins()),
+                Msg.c("&7Partidas:  &f" + stats.getGames()),
+                Msg.c("&8&m──────────────────")
+            )));
+
+        // Top 10
+        inv.setItem(29, make(Material.GOLDEN_SWORD,
+            Msg.c("&6&l🏆 TOP 10"),
+            Arrays.asList(
+                Msg.c("&7Ver el ranking"),
+                Msg.c("&7de mejores jugadores"),
+                Msg.c("&eClick para ver")
+            )));
+
+        // Misiones
+        inv.setItem(31, make(Material.WRITABLE_BOOK,
+            Msg.c("&d&l📋 MISIONES DIARIAS"),
+            Arrays.asList(
+                Msg.c("&8&m──────────────────"),
+                Msg.c(plugin.getMissionManager().getMissionStatus(p)),
+                Msg.c("&8&m──────────────────"),
+                Msg.c("&eClick para ver misiones")
+            )));
+
+        // Créditos
+        inv.setItem(33, make(Material.NETHER_STAR,
+            Msg.c("&e&l⭐ CRÉDITOS"),
+            Arrays.asList(
+                Msg.c("&8&m──────────────────"),
+                Msg.c("&7Plugin: &bAdvancedPaintball"),
+                Msg.c("&7Versión: &f1.0.0"),
+                Msg.c("&7Autor: &eSoyAdrianYT001"),
+                Msg.c("&7Server: &f1.21.1"),
+                Msg.c("&8&m──────────────────")
+            )));
+
+        p.openInventory(inv);
+        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.5f, 1.5f);
+
+        // Animación del menú
+        startAnimation(p, inv);
+    }
+
+    private void startAnimation(Player p, Inventory inv) {
+        // Cancelar animación anterior si existe
+        if (animations.containsKey(p.getUniqueId())) {
+            animations.get(p.getUniqueId()).cancel();
         }
-        return make(mat, Msg.c(a.getDisplayName()), lore);
+
+        final Material[] borderMats = {
+            Material.CYAN_STAINED_GLASS_PANE,
+            Material.BLUE_STAINED_GLASS_PANE,
+            Material.LIGHT_BLUE_STAINED_GLASS_PANE,
+            Material.WHITE_STAINED_GLASS_PANE,
+            Material.LIGHT_BLUE_STAINED_GLASS_PANE,
+            Material.BLUE_STAINED_GLASS_PANE
+        };
+        final int[] frame = {0};
+
+        BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (p.getOpenInventory() == null ||
+                !p.getOpenInventory().getTitle().equals(TITLE)) {
+                animations.remove(p.getUniqueId());
+                return;
+            }
+            Material mat = borderMats[frame[0] % borderMats.length];
+            ItemStack border = make(mat, " ", null);
+            for (int i = 0; i < 9; i++) inv.setItem(i, border);
+            for (int i = 45; i < 54; i++) inv.setItem(i, border);
+            for (int i = 0; i < 54; i += 9) inv.setItem(i, border);
+            for (int i = 8; i < 54; i += 9) inv.setItem(i, border);
+            frame[0]++;
+        }, 0L, 10L);
+
+        animations.put(p.getUniqueId(), task);
     }
 
     @EventHandler
@@ -90,30 +167,97 @@ public class ArenaMenuGUI implements Listener {
         if (!e.getView().getTitle().equals(TITLE)) return;
         e.setCancelled(true);
         if (!(e.getWhoClicked() instanceof Player p)) return;
+
         ItemStack item = e.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
-        String name = item.getItemMeta().getDisplayName();
-        if (name.isBlank() || name.equals(" ")) return;
 
-        // Tienda - solo si está en arena
-        if (item.getType() == Material.CHEST) {
-            if (!plugin.getGameManager().inGame(p)) {
-                p.sendMessage(Msg.err("Debes estar dentro de una arena para usar la tienda."));
-                return;
-            }
-            p.closeInventory();
-            plugin.getKitShopGUI().open(p);
-            return;
-        }
-
-        // Buscar arena
-        for (Arena a : plugin.getArenaManager().visible()) {
-            if (Msg.c(a.getDisplayName()).equals(name)) {
+        switch (e.getSlot()) {
+            case 20 -> { // Jugar
                 p.closeInventory();
-                if (e.isShiftClick()) plugin.getGameManager().spectate(p, a);
-                else plugin.getGameManager().join(p, a);
-                return;
+                cancelAnimation(p);
+                plugin.getArenaSelectorGUI().open(p);
             }
+            case 22 -> { // Tienda
+                if (!plugin.getGameManager().inGame(p)) {
+                    p.sendMessage(Msg.err("Debes estar en una arena para usar la tienda."));
+                    return;
+                }
+                p.closeInventory();
+                cancelAnimation(p);
+                plugin.getShopGUI().open(p);
+            }
+            case 24 -> { // Stats
+                p.closeInventory();
+                cancelAnimation(p);
+                showStats(p);
+            }
+            case 29 -> { // Top
+                p.closeInventory();
+                cancelAnimation(p);
+                showTop(p);
+            }
+            case 33 -> { // Créditos
+                p.closeInventory();
+                cancelAnimation(p);
+                showCredits(p);
+            }
+        }
+    }
+
+    private void showStats(Player p) {
+        PlayerStats stats = plugin.getStatsManager().get(p);
+        String rank = plugin.getRankManager().getFormattedRank(stats);
+        p.sendMessage(Msg.sep());
+        p.sendMessage(Msg.c("  &b&lEstadísticas de &f" + p.getName()));
+        p.sendMessage(Msg.c("  &7Rango:     " + rank));
+        p.sendMessage(Msg.c("  &7Nivel:     &e" + stats.getLevel()));
+        p.sendMessage(Msg.c("  &6Coins:     &e" + stats.getCoins()));
+        p.sendMessage(Msg.c("  &7Kills:     &a" + stats.getKills()));
+        p.sendMessage(Msg.c("  &7Muertes:   &c" + stats.getDeaths()));
+        p.sendMessage(Msg.c("  &7KDR:       &f" + stats.kdr()));
+        p.sendMessage(Msg.c("  &7Victorias: &b" + stats.getWins()));
+        p.sendMessage(Msg.c("  &7Partidas:  &f" + stats.getGames()));
+        p.sendMessage(Msg.c("  &7Kit:       &e" + stats.getKit()));
+        p.sendMessage(Msg.c("  &7Misiones:  " + plugin.getMissionManager().getMissionStatus(p)));
+        p.sendMessage(Msg.sep());
+    }
+
+    private void showTop(Player p) {
+        p.sendMessage(Msg.sep());
+        p.sendMessage(Msg.c("  &6&lTOP 10 — AdvancedPaintball"));
+        List<com.soyadrianyt001.advancedpaintball.models.PlayerStats> top =
+            plugin.getStatsManager().top(10);
+        for (int i = 0; i < top.size(); i++) {
+            var s = top.get(i);
+            String medal = switch (i) {
+                case 0 -> "&6&l#1 🥇";
+                case 1 -> "&7&l#2 🥈";
+                case 2 -> "&c&l#3 🥉";
+                default -> "&f#" + (i + 1);
+            };
+            p.sendMessage(Msg.c("  " + medal + " &e" + s.getName()
+                + " &8│ &aKills: " + s.getKills()
+                + " &8│ &7KDR: " + s.kdr()
+                + " &8│ &bVictorias: " + s.getWins()));
+        }
+        p.sendMessage(Msg.sep());
+    }
+
+    private void showCredits(Player p) {
+        p.sendMessage(Msg.sep());
+        p.sendMessage(Msg.c("  &b&lAdvancedPaintball &7v1.0.0"));
+        p.sendMessage(Msg.c("  &7Creado por: &e&lSoyAdrianYT001"));
+        p.sendMessage(Msg.c("  &7Minecraft: &f1.21.1 Paper/Spigot"));
+        p.sendMessage(Msg.c("  &7Tipo: &aPremium &7✔"));
+        p.sendMessage(Msg.c("  &74 equipos | 4 kits | NPC tienda"));
+        p.sendMessage(Msg.c("  &7Rangos | Misiones | MySQL"));
+        p.sendMessage(Msg.sep());
+    }
+
+    public void cancelAnimation(Player p) {
+        if (animations.containsKey(p.getUniqueId())) {
+            animations.get(p.getUniqueId()).cancel();
+            animations.remove(p.getUniqueId());
         }
     }
 
