@@ -37,6 +37,7 @@ public class ArenaManager {
             a.setMaxPlayers(cfg.getInt(p + "maxPlayers", 16));
             a.setGameTime(cfg.getInt(p + "gameTime", 300));
             a.setKillsToWin(cfg.getInt(p + "killsToWin", 30));
+            a.setVisibleInMenu(cfg.getBoolean(p + "visibleInMenu", false));
             String wn = cfg.getString(p + "world");
             if (wn != null) {
                 World w = plugin.getServer().getWorld(wn);
@@ -57,11 +58,12 @@ public class ArenaManager {
 
     public void save(Arena a) {
         String p = "arenas." + a.getName() + ".";
-        cfg.set(p + "displayName", a.getDisplayName());
-        cfg.set(p + "minPlayers",  a.getMinPlayers());
-        cfg.set(p + "maxPlayers",  a.getMaxPlayers());
-        cfg.set(p + "gameTime",    a.getGameTime());
-        cfg.set(p + "killsToWin",  a.getKillsToWin());
+        cfg.set(p + "displayName",   a.getDisplayName());
+        cfg.set(p + "minPlayers",    a.getMinPlayers());
+        cfg.set(p + "maxPlayers",    a.getMaxPlayers());
+        cfg.set(p + "gameTime",      a.getGameTime());
+        cfg.set(p + "killsToWin",    a.getKillsToWin());
+        cfg.set(p + "visibleInMenu", a.isVisibleInMenu());
         if (a.getLobby() != null) {
             cfg.set(p + "world", a.getLobby().getWorld().getName());
             writeLoc(p + "lobby", a.getLobby());
@@ -87,6 +89,15 @@ public class ArenaManager {
     public Arena   get(String name)    { return arenas.get(name.toLowerCase()); }
     public boolean exists(String name) { return arenas.containsKey(name.toLowerCase()); }
     public Collection<Arena> all()     { return arenas.values(); }
+
+    // Solo arenas visibles para jugadores
+    public Collection<Arena> visible() {
+        List<Arena> list = new ArrayList<>();
+        for (Arena a : arenas.values()) {
+            if (a.isVisibleInMenu()) list.add(a);
+        }
+        return list;
+    }
 
     private void writeLoc(String path, Location l) {
         cfg.set(path + ".world", l.getWorld().getName());
