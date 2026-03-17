@@ -33,6 +33,7 @@ public class AdvancedPaintball extends JavaPlugin {
     private ArenaSelectorGUI arenaSelectorGUI;
     private ShopGUI shopGUI;
     private TeamSelectorGUI teamSelectorGUI;
+    private ParticleSelectorGUI particleSelectorGUI;
 
     // ── NPC ───────────────────────────────────────────────────────────────────
     private ShopNPC shopNPC;
@@ -42,7 +43,7 @@ public class AdvancedPaintball extends JavaPlugin {
         instance = this;
         saveDefaultConfig();
 
-        // Managers en orden correcto
+        // Managers en orden
         mySQLManager           = new MySQLManager(this);
         arenaManager           = new ArenaManager(this);
         statsManager           = new StatsManager(this);
@@ -56,11 +57,12 @@ public class AdvancedPaintball extends JavaPlugin {
         shopNPC                = new ShopNPC(this);
 
         // GUIs
-        mainMenuGUI      = new MainMenuGUI(this);
-        adminPanelGUI    = new AdminPanelGUI(this);
-        arenaSelectorGUI = new ArenaSelectorGUI(this);
-        shopGUI          = new ShopGUI(this);
-        teamSelectorGUI  = new TeamSelectorGUI(this);
+        mainMenuGUI          = new MainMenuGUI(this);
+        adminPanelGUI        = new AdminPanelGUI(this);
+        arenaSelectorGUI     = new ArenaSelectorGUI(this);
+        shopGUI              = new ShopGUI(this);
+        teamSelectorGUI      = new TeamSelectorGUI(this);
+        particleSelectorGUI  = new ParticleSelectorGUI(this);
 
         // Comandos
         PACommand paCmd = new PACommand(this);
@@ -82,6 +84,7 @@ public class AdvancedPaintball extends JavaPlugin {
         getServer().getPluginManager().registerEvents(arenaSelectorGUI, this);
         getServer().getPluginManager().registerEvents(shopGUI, this);
         getServer().getPluginManager().registerEvents(teamSelectorGUI, this);
+        getServer().getPluginManager().registerEvents(particleSelectorGUI, this);
         getServer().getPluginManager().registerEvents(chatManager, this);
 
         // PlaceholderAPI
@@ -143,4 +146,5 @@ public class AdvancedPaintball extends JavaPlugin {
     public ArenaSelectorGUI getArenaSelectorGUI()     { return arenaSelectorGUI; }
     public ShopGUI getShopGUI()                       { return shopGUI; }
     public TeamSelectorGUI getTeamSelectorGUI()       { return teamSelectorGUI; }
+    public ParticleSelectorGUI getParticleSelectorGUI() { return particleSelectorGUI; }
 }
