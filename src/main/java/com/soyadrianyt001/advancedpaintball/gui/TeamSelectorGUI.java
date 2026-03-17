@@ -3,8 +3,10 @@ package com.soyadrianyt001.advancedpaintball.gui;
 import com.soyadrianyt001.advancedpaintball.AdvancedPaintball;
 import com.soyadrianyt001.advancedpaintball.models.Game;
 import com.soyadrianyt001.advancedpaintball.models.Game.Team;
+import com.soyadrianyt001.advancedpaintball.utils.KitUtils;
 import com.soyadrianyt001.advancedpaintball.utils.Msg;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -14,6 +16,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import java.util.Arrays;
 import java.util.List;
@@ -34,40 +37,61 @@ public class TeamSelectorGUI implements Listener {
         ItemStack bg = make(Material.BLACK_STAINED_GLASS_PANE, " ", null);
         for (int i = 0; i < 27; i++) inv.setItem(i, bg);
 
-        // Equipo actual del jugador
         Team current   = game.getTeam(p);
         int redSize    = game.getTeamPlayers(Team.RED).size();
         int pinkSize   = game.getTeamPlayers(Team.PINK).size();
         int greenSize  = game.getTeamPlayers(Team.GREEN).size();
         int yellowSize = game.getTeamPlayers(Team.YELLOW).size();
 
-        // Info del equipo actual
-        String tc = plugin.getGameManager().teamColor(current);
-        String tn = plugin.getGameManager().teamName(current);
+        // Info jugador
         inv.setItem(4, make(Material.COMPASS,
-            Msg.c("&7Equipo actual: " + tc + "&l" + tn),
+            Msg.c("&7Tu equipo actual: "
+                + plugin.getGameManager().teamColor(current)
+                + "&l" + plugin.getGameManager().teamName(current)),
             Arrays.asList(
                 Msg.c("&7Click en un equipo para unirte"),
-                Msg.c("&8&m──────────────────"),
-                Msg.c("&7Total jugadores: &f" + game.totalActive())
+                Msg.c("&7Se te equipará la armadura del equipo")
             )));
 
-        // Botones de equipos
-        inv.setItem(10, teamBtn(Material.RED_WOOL,
+        // Equipo Rojo
+        inv.setItem(10, teamBtn(
+            Material.RED_WOOL,
             "&c&l❤ Equipo Rojo",
-            redSize, Team.RED, current));
+            redSize, Team.RED, current,
+            Arrays.asList(
+                Msg.c("&7Armadura: &cRoja"),
+                Msg.c("&7Jugadores: &f" + redSize)
+            )));
 
-        inv.setItem(12, teamBtn(Material.PINK_WOOL,
+        // Equipo Rosa
+        inv.setItem(12, teamBtn(
+            Material.PINK_WOOL,
             "&d&l✿ Equipo Rosa",
-            pinkSize, Team.PINK, current));
+            pinkSize, Team.PINK, current,
+            Arrays.asList(
+                Msg.c("&7Armadura: &dRosa"),
+                Msg.c("&7Jugadores: &f" + pinkSize)
+            )));
 
-        inv.setItem(14, teamBtn(Material.GREEN_WOOL,
+        // Equipo Verde
+        inv.setItem(14, teamBtn(
+            Material.GREEN_WOOL,
             "&a&l✦ Equipo Verde",
-            greenSize, Team.GREEN, current));
+            greenSize, Team.GREEN, current,
+            Arrays.asList(
+                Msg.c("&7Armadura: &aVerde"),
+                Msg.c("&7Jugadores: &f" + greenSize)
+            )));
 
-        inv.setItem(16, teamBtn(Material.YELLOW_WOOL,
+        // Equipo Amarillo
+        inv.setItem(16, teamBtn(
+            Material.YELLOW_WOOL,
             "&e&l★ Equipo Amarillo",
-            yellowSize, Team.YELLOW, current));
+            yellowSize, Team.YELLOW, current,
+            Arrays.asList(
+                Msg.c("&7Armadura: &eAmarilla"),
+                Msg.c("&7Jugadores: &f" + yellowSize)
+            )));
 
         // Cerrar
         inv.setItem(22, make(Material.BARRIER,
@@ -77,14 +101,13 @@ public class TeamSelectorGUI implements Listener {
     }
 
     private ItemStack teamBtn(Material mat, String name, int size,
-                               Team team, Team current) {
+                               Team team, Team current, List<String> extra) {
         boolean isCurrent = team == current;
-        List<String> lore = Arrays.asList(
-            Msg.c("&8&m──────────────────"),
-            Msg.c("&7Jugadores: &f" + size),
-            Msg.c("&8&m──────────────────"),
-            Msg.c(isCurrent ? "&a&l✔ EQUIPO ACTUAL" : "&eClick para unirte")
-        );
+        List<String> lore = new java.util.ArrayList<>();
+        lore.add(Msg.c("&8&m──────────────────"));
+        lore.addAll(extra);
+        lore.add(Msg.c("&8&m──────────────────"));
+        lore.add(Msg.c(isCurrent ? "&a&l✔ EQUIPO ACTUAL" : "&eClick para unirte"));
         return make(mat, Msg.c(name), lore);
     }
 
@@ -97,12 +120,13 @@ public class TeamSelectorGUI implements Listener {
         Game game = plugin.getGameManager().getGame(p);
         if (game == null) { p.closeInventory(); return; }
 
-        // No cambiar equipo durante la partida
         if (game.getState() == Game.State.IN_GAME) {
-            p.sendMessage(Msg.err("No puedes cambiar de equipo durante la partida."));
+            p.sendMessage(Msg.err("No puedes cambiar equipo durante la partida."));
             p.closeInventory();
             return;
         }
+
+        if (e.getSlot() == 22) { p.closeInventory(); return; }
 
         Team chosen = switch (e.getSlot()) {
             case 10 -> Team.RED;
@@ -111,23 +135,61 @@ public class TeamSelectorGUI implements Listener {
             case 16 -> Team.YELLOW;
             default -> null;
         };
-
-        if (e.getSlot() == 22) { p.closeInventory(); return; }
         if (chosen == null) return;
 
         // Cambiar equipo
         game.getPlayers().put(p.getUniqueId(), chosen);
+
+        // Equipar armadura del color del equipo
+        equipTeamArmor(p, chosen);
+
         String tc = plugin.getGameManager().teamColor(chosen);
         String tn = plugin.getGameManager().teamName(chosen);
 
-        p.sendMessage(Msg.ok("Cambiaste al equipo " + tc + "&l" + tn + "&a!"));
+        p.sendMessage(Msg.ok("Te uniste al equipo " + tc + "&l" + tn + "&a!"));
         p.sendTitle(
             Msg.c(tc + "&l" + tn),
-            Msg.c("&7¡Listo para jugar!"),
-            5, 30, 5);
+            Msg.c("&7¡Listo! Esperando inicio de partida..."),
+            5, 40, 5);
         p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
         plugin.getScoreboardManager().update(p, game);
+
+        // Re-dar items de lobby
+        p.getInventory().setItem(7, plugin.getGameManager().getTeamItem());
+        p.getInventory().setItem(8, plugin.getGameManager().getLeaveItem());
+
         p.closeInventory();
+    }
+
+    private void equipTeamArmor(Player p, Team team) {
+        Color color = switch (team) {
+            case RED    -> Color.RED;
+            case PINK   -> Color.FUCHSIA;
+            case GREEN  -> Color.GREEN;
+            case YELLOW -> Color.YELLOW;
+            default     -> Color.WHITE;
+        };
+        String prefix = switch (team) {
+            case RED    -> "&c";
+            case PINK   -> "&d";
+            case GREEN  -> "&a";
+            case YELLOW -> "&e";
+            default     -> "&f";
+        };
+
+        p.getInventory().setHelmet(leatherArmor(Material.LEATHER_HELMET, color, prefix + "Casco"));
+        p.getInventory().setChestplate(leatherArmor(Material.LEATHER_CHESTPLATE, color, prefix + "Pecho"));
+        p.getInventory().setLeggings(leatherArmor(Material.LEATHER_LEGGINGS, color, prefix + "Pantalón"));
+        p.getInventory().setBoots(leatherArmor(Material.LEATHER_BOOTS, color, prefix + "Botas"));
+    }
+
+    private ItemStack leatherArmor(Material mat, Color color, String name) {
+        ItemStack item = new ItemStack(mat);
+        LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
+        meta.setColor(color);
+        meta.setDisplayName(Msg.c(name));
+        item.setItemMeta(meta);
+        return item;
     }
 
     private ItemStack make(Material m, String name, List<String> lore) {
