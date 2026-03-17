@@ -1,5 +1,6 @@
 package com.soyadrianyt001.advancedpaintball.utils;
 
+import com.soyadrianyt001.advancedpaintball.models.Game;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
@@ -24,14 +25,14 @@ public final class FireworkUtils {
         fw.setFireworkMeta(meta);
     }
 
-    public static void launchTeam(Location loc, com.soyadrianyt001.advancedpaintball.models.Game.Team team) {
+    public static void launchTeam(Location loc, Game.Team team) {
         Color c1, c2;
         switch (team) {
-            case RED   -> { c1 = Color.RED;    c2 = Color.ORANGE; }
-            case PINK  -> { c1 = Color.FUCHSIA; c2 = Color.WHITE; }
-            case GREEN -> { c1 = Color.GREEN;  c2 = Color.LIME;   }
-            case YELLOW-> { c1 = Color.YELLOW; c2 = Color.GOLD;   }
-            default    -> { c1 = Color.WHITE;  c2 = Color.GRAY;   }
+            case RED    -> { c1 = Color.RED;                      c2 = Color.ORANGE; }
+            case PINK   -> { c1 = Color.FUCHSIA;                  c2 = Color.WHITE; }
+            case GREEN  -> { c1 = Color.GREEN;                    c2 = Color.LIME; }
+            case YELLOW -> { c1 = Color.YELLOW;                   c2 = Color.fromRGB(255, 140, 0); }
+            default     -> { c1 = Color.WHITE;                    c2 = Color.GRAY; }
         }
         launch(loc, c1, c2);
     }
