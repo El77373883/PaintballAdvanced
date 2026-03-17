@@ -26,6 +26,12 @@ public class AdvancedPaintball extends JavaPlugin {
     private InventoryBackupManager inventoryBackupManager;
     private ChatManager chatManager;
     private MySQLManager mySQLManager;
+    private ClanManager clanManager;
+    private FriendManager friendManager;
+    private HologramManager hologramManager;
+    private SignManager signManager;
+    private TablistManager tablistManager;
+    private KillMessageManager killMessageManager;
 
     // ── GUIs ──────────────────────────────────────────────────────────────────
     private MainMenuGUI mainMenuGUI;
@@ -54,15 +60,21 @@ public class AdvancedPaintball extends JavaPlugin {
         scoreboardManager      = new ScoreboardManager(this);
         wandManager            = new WandManager(this);
         chatManager            = new ChatManager(this);
+        clanManager            = new ClanManager(this);
+        friendManager          = new FriendManager(this);
+        hologramManager        = new HologramManager(this);
+        signManager            = new SignManager(this);
+        tablistManager         = new TablistManager(this);
+        killMessageManager     = new KillMessageManager(this);
         shopNPC                = new ShopNPC(this);
 
         // GUIs
-        mainMenuGUI          = new MainMenuGUI(this);
-        adminPanelGUI        = new AdminPanelGUI(this);
-        arenaSelectorGUI     = new ArenaSelectorGUI(this);
-        shopGUI              = new ShopGUI(this);
-        teamSelectorGUI      = new TeamSelectorGUI(this);
-        particleSelectorGUI  = new ParticleSelectorGUI(this);
+        mainMenuGUI         = new MainMenuGUI(this);
+        adminPanelGUI       = new AdminPanelGUI(this);
+        arenaSelectorGUI    = new ArenaSelectorGUI(this);
+        shopGUI             = new ShopGUI(this);
+        teamSelectorGUI     = new TeamSelectorGUI(this);
+        particleSelectorGUI = new ParticleSelectorGUI(this);
 
         // Comandos
         PACommand paCmd = new PACommand(this);
@@ -79,6 +91,7 @@ public class AdvancedPaintball extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new WandListener(this), this);
         getServer().getPluginManager().registerEvents(new TrailListener(this), this);
         getServer().getPluginManager().registerEvents(new VIPParticleListener(this), this);
+        getServer().getPluginManager().registerEvents(new SignListener(this), this);
         getServer().getPluginManager().registerEvents(mainMenuGUI, this);
         getServer().getPluginManager().registerEvents(adminPanelGUI, this);
         getServer().getPluginManager().registerEvents(arenaSelectorGUI, this);
@@ -90,7 +103,7 @@ public class AdvancedPaintball extends JavaPlugin {
         // PlaceholderAPI
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new PAPIHook(this).register();
-            getLogger().info("§a[AdvancedPaintball] PlaceholderAPI conectado!");
+            getLogger().info("§a[AP] PlaceholderAPI conectado!");
         }
 
         // Autosave cada 5 minutos
@@ -98,7 +111,8 @@ public class AdvancedPaintball extends JavaPlugin {
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
             statsManager.saveAll();
             missionManager.saveAll();
-            getLogger().info("§7[AdvancedPaintball] Autosave completado.");
+            friendManager.saveAll();
+            getLogger().info("§7[AP] Autosave completado.");
         }, interval, interval);
 
         banner();
@@ -106,11 +120,13 @@ public class AdvancedPaintball extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (gameManager != null) gameManager.stopAll();
-        if (statsManager != null) statsManager.saveAll();
+        if (gameManager != null)    gameManager.stopAll();
+        if (statsManager != null)   statsManager.saveAll();
         if (missionManager != null) missionManager.saveAll();
-        if (mySQLManager != null) mySQLManager.disconnect();
-        getLogger().info("§c[AdvancedPaintball] Plugin desactivado.");
+        if (friendManager != null)  friendManager.saveAll();
+        if (mySQLManager != null)   mySQLManager.disconnect();
+        if (hologramManager != null) hologramManager.removeTop();
+        getLogger().info("§c[AP] Plugin desactivado.");
     }
 
     private void banner() {
@@ -129,22 +145,28 @@ public class AdvancedPaintball extends JavaPlugin {
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────
-    public static AdvancedPaintball get()             { return instance; }
-    public ArenaManager getArenaManager()             { return arenaManager; }
-    public GameManager getGameManager()               { return gameManager; }
-    public StatsManager getStatsManager()             { return statsManager; }
-    public ScoreboardManager getScoreboardManager()   { return scoreboardManager; }
-    public WandManager getWandManager()               { return wandManager; }
-    public MissionManager getMissionManager()         { return missionManager; }
-    public RankManager getRankManager()               { return rankManager; }
+    public static AdvancedPaintball get()               { return instance; }
+    public ArenaManager getArenaManager()               { return arenaManager; }
+    public GameManager getGameManager()                 { return gameManager; }
+    public StatsManager getStatsManager()               { return statsManager; }
+    public ScoreboardManager getScoreboardManager()     { return scoreboardManager; }
+    public WandManager getWandManager()                 { return wandManager; }
+    public MissionManager getMissionManager()           { return missionManager; }
+    public RankManager getRankManager()                 { return rankManager; }
     public InventoryBackupManager getInventoryBackupManager() { return inventoryBackupManager; }
-    public ChatManager getChatManager()               { return chatManager; }
-    public MySQLManager getMySQLManager()             { return mySQLManager; }
-    public ShopNPC getShopNPC()                       { return shopNPC; }
-    public MainMenuGUI getMainMenuGUI()               { return mainMenuGUI; }
-    public AdminPanelGUI getAdminPanelGUI()           { return adminPanelGUI; }
-    public ArenaSelectorGUI getArenaSelectorGUI()     { return arenaSelectorGUI; }
-    public ShopGUI getShopGUI()                       { return shopGUI; }
-    public TeamSelectorGUI getTeamSelectorGUI()       { return teamSelectorGUI; }
+    public ChatManager getChatManager()                 { return chatManager; }
+    public MySQLManager getMySQLManager()               { return mySQLManager; }
+    public ClanManager getClanManager()                 { return clanManager; }
+    public FriendManager getFriendManager()             { return friendManager; }
+    public HologramManager getHologramManager()         { return hologramManager; }
+    public SignManager getSignManager()                 { return signManager; }
+    public TablistManager getTablistManager()           { return tablistManager; }
+    public KillMessageManager getKillMessageManager()   { return killMessageManager; }
+    public ShopNPC getShopNPC()                         { return shopNPC; }
+    public MainMenuGUI getMainMenuGUI()                 { return mainMenuGUI; }
+    public AdminPanelGUI getAdminPanelGUI()             { return adminPanelGUI; }
+    public ArenaSelectorGUI getArenaSelectorGUI()       { return arenaSelectorGUI; }
+    public ShopGUI getShopGUI()                         { return shopGUI; }
+    public TeamSelectorGUI getTeamSelectorGUI()         { return teamSelectorGUI; }
     public ParticleSelectorGUI getParticleSelectorGUI() { return particleSelectorGUI; }
 }
