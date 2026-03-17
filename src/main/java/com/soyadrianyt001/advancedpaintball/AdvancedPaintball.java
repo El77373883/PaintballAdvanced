@@ -2,22 +2,20 @@ package com.soyadrianyt001.advancedpaintball;
 
 import com.soyadrianyt001.advancedpaintball.commands.PAAdminCommand;
 import com.soyadrianyt001.advancedpaintball.commands.PACommand;
-import com.soyadrianyt001.advancedpaintball.gui.AdminPanelGUI;
-import com.soyadrianyt001.advancedpaintball.gui.ArenaMenuGUI;
-import com.soyadrianyt001.advancedpaintball.gui.KitShopGUI;
-import com.soyadrianyt001.advancedpaintball.gui.TeamSelectorGUI;
-import com.soyadrianyt001.advancedpaintball.listeners.GameListener;
-import com.soyadrianyt001.advancedpaintball.listeners.ShootListener;
-import com.soyadrianyt001.advancedpaintball.listeners.TrailListener;
-import com.soyadrianyt001.advancedpaintball.listeners.WandListener;
+import com.soyadrianyt001.advancedpaintball.gui.*;
+import com.soyadrianyt001.advancedpaintball.hooks.PAPIHook;
+import com.soyadrianyt001.advancedpaintball.listeners.*;
 import com.soyadrianyt001.advancedpaintball.managers.*;
 import com.soyadrianyt001.advancedpaintball.npc.ShopNPC;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class AdvancedPaintball extends JavaPlugin {
 
     private static AdvancedPaintball instance;
+
+    // Managers
     private ArenaManager arenaManager;
     private GameManager gameManager;
     private StatsManager statsManager;
@@ -26,17 +24,26 @@ public class AdvancedPaintball extends JavaPlugin {
     private MissionManager missionManager;
     private RankManager rankManager;
     private InventoryBackupManager inventoryBackupManager;
-    private ShopNPC shopNPC;
-    private ArenaMenuGUI arenaMenuGUI;
+    private ChatManager chatManager;
+    private MySQLManager mySQLManager;
+
+    // GUIs
+    private MainMenuGUI mainMenuGUI;
     private AdminPanelGUI adminPanelGUI;
-    private KitShopGUI kitShopGUI;
+    private ArenaSelectorGUI arenaSelectorGUI;
+    private ShopGUI shopGUI;
     private TeamSelectorGUI teamSelectorGUI;
+
+    // NPC
+    private ShopNPC shopNPC;
 
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
 
+        // Managers en orden
+        mySQLManager           = new MySQLManager(this);
         arenaManager           = new ArenaManager(this);
         statsManager           = new StatsManager(this);
         rankManager            = new RankManager(this);
@@ -45,13 +52,17 @@ public class AdvancedPaintball extends JavaPlugin {
         gameManager            = new GameManager(this);
         scoreboardManager      = new ScoreboardManager(this);
         wandManager            = new WandManager(this);
+        chatManager            = new ChatManager(this);
         shopNPC                = new ShopNPC(this);
 
-        arenaMenuGUI    = new ArenaMenuGUI(this);
+        // GUIs
+        mainMenuGUI     = new MainMenuGUI(this);
         adminPanelGUI   = new AdminPanelGUI(this);
-        kitShopGUI      = new KitShopGUI(this);
+        arenaSelectorGUI = new ArenaSelectorGUI(this);
+        shopGUI         = new ShopGUI(this);
         teamSelectorGUI = new TeamSelectorGUI(this);
 
+        // Comandos
         PACommand paCmd = new PACommand(this);
         getCommand("pa").setExecutor(paCmd);
         getCommand("pa").setTabCompleter(paCmd);
@@ -60,14 +71,33 @@ public class AdvancedPaintball extends JavaPlugin {
         getCommand("pa-admin").setExecutor(paAdminCmd);
         getCommand("pa-admin").setTabCompleter(paAdminCmd);
 
+        // Listeners
         getServer().getPluginManager().registerEvents(new GameListener(this), this);
         getServer().getPluginManager().registerEvents(new ShootListener(this), this);
         getServer().getPluginManager().registerEvents(new WandListener(this), this);
         getServer().getPluginManager().registerEvents(new TrailListener(this), this);
-        getServer().getPluginManager().registerEvents(arenaMenuGUI, this);
+        getServer().getPluginManager().registerEvents(new VIPParticleListener(this), this);
+        getServer().getPluginManager().registerEvents(mainMenuGUI, this);
         getServer().getPluginManager().registerEvents(adminPanelGUI, this);
-        getServer().getPluginManager().registerEvents(kitShopGUI, this);
+        getServer().getPluginManager().registerEvents(arenaSelectorGUI, this);
+        getServer().getPluginManager().registerEvents(shopGUI, this);
         getServer().getPluginManager().registerEvents(teamSelectorGUI, this);
+        getServer().getPluginManager().registerEvents(chatManager, this);
+
+        // PlaceholderAPI
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new PAPIHook(this).register();
+            getLogger().info("§a[AdvancedPaintball] PlaceholderAPI conectado!");
+        }
+
+        // Autosave cada 5 minutos
+        int interval = getConfig().getInt("autosave-interval", 300) * 20L > 0
+            ? getConfig().getInt("autosave-interval", 300) : 300;
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+            statsManager.saveAll();
+            missionManager.saveAll();
+            getLogger().info("§7[AdvancedPaintball] Autosave completado.");
+        }, interval * 20L, interval * 20L);
 
         banner();
     }
@@ -77,6 +107,8 @@ public class AdvancedPaintball extends JavaPlugin {
         if (gameManager != null) gameManager.stopAll();
         if (statsManager != null) statsManager.saveAll();
         if (missionManager != null) missionManager.saveAll();
+        if (mySQLManager != null) mySQLManager.disconnect();
+        getLogger().info("§c[AdvancedPaintball] Plugin desactivado.");
     }
 
     private void banner() {
@@ -94,6 +126,7 @@ public class AdvancedPaintball extends JavaPlugin {
         return ChatColor.translateAlternateColorCodes('&', s);
     }
 
+    // Getters
     public static AdvancedPaintball get()             { return instance; }
     public ArenaManager getArenaManager()             { return arenaManager; }
     public GameManager getGameManager()               { return gameManager; }
@@ -103,9 +136,12 @@ public class AdvancedPaintball extends JavaPlugin {
     public MissionManager getMissionManager()         { return missionManager; }
     public RankManager getRankManager()               { return rankManager; }
     public InventoryBackupManager getInventoryBackupManager() { return inventoryBackupManager; }
+    public ChatManager getChatManager()               { return chatManager; }
+    public MySQLManager getMySQLManager()             { return mySQLManager; }
     public ShopNPC getShopNPC()                       { return shopNPC; }
-    public ArenaMenuGUI getArenaMenuGUI()             { return arenaMenuGUI; }
+    public MainMenuGUI getMainMenuGUI()               { return mainMenuGUI; }
     public AdminPanelGUI getAdminPanelGUI()           { return adminPanelGUI; }
-    public KitShopGUI getKitShopGUI()                 { return kitShopGUI; }
+    public ArenaSelectorGUI getArenaSelectorGUI()     { return arenaSelectorGUI; }
+    public ShopGUI getShopGUI()                       { return shopGUI; }
     public TeamSelectorGUI getTeamSelectorGUI()       { return teamSelectorGUI; }
 }
