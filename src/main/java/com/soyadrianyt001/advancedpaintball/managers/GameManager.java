@@ -44,17 +44,17 @@ public class GameManager {
         meta.setDisplayName(Msg.c("&e&l⚑ Elegir Equipo"));
         meta.setLore(Arrays.asList(
             Msg.c("&7Click para cambiar de equipo"),
-            Msg.c("&c❤ Rojo  &d✿ Rosa"),
-            Msg.c("&a✦ Verde  &e★ Amarillo")
+            Msg.c("&8&m──────────────────"),
+            Msg.c("&c❤ Rojo    &d✿ Rosa"),
+            Msg.c("&a✦ Verde   &e★ Amarillo"),
+            Msg.c("&8&m──────────────────"),
+            Msg.c("&7Se equipará armadura del color")
         ));
         item.setItemMeta(meta);
         return item;
     }
 
-    // ── Dar items de lobby al jugador ─────────────────────────────────────────
-
     private void giveLobbyItems(Player p) {
-        // Slots inferiores del inventario (7 y 8)
         p.getInventory().setItem(7, getTeamItem());
         p.getInventory().setItem(8, getLeaveItem());
     }
@@ -69,7 +69,7 @@ public class GameManager {
         Game game = games.computeIfAbsent(arena.getName(), k -> new Game(arena));
 
         if (game.getState() == Game.State.IN_GAME || game.getState() == Game.State.ENDING) {
-            p.sendMessage(Msg.err("Esa partida ya está en curso. Usa Shift+Click para observar."));
+            p.sendMessage(Msg.err("Esa partida ya está en curso."));
             return false;
         }
         if (game.totalActive() >= arena.getMaxPlayers()) {
@@ -77,7 +77,7 @@ public class GameManager {
             return false;
         }
 
-        // Guardar inventario
+        // Guardar inventario original
         plugin.getInventoryBackupManager().backup(p);
 
         Team team = balanceTeam(game);
@@ -94,8 +94,11 @@ public class GameManager {
         p.getInventory().addItem(new ItemStack(Material.SNOWBALL, 64));
         p.getInventory().addItem(new ItemStack(Material.SNOWBALL, 64));
 
-        // Items en slots inferiores
+        // Dar items de lobby en slots 7 y 8
         giveLobbyItems(p);
+
+        // Equipar armadura del equipo automáticamente
+        equipTeamArmor(p, team);
 
         String tc = teamColor(team);
         String tn = teamName(team);
@@ -103,12 +106,12 @@ public class GameManager {
         // Mensaje de bienvenida
         p.sendMessage(Msg.sep());
         p.sendMessage(Msg.c("  &b&lAdvancedPaintball &8▸ &f" + arena.getName()));
-        p.sendMessage(Msg.c("  &7Equipo: " + tc + "&l" + tn));
-        p.sendMessage(Msg.c("  &7Slot &f8 &7= Elegir equipo"));
-        p.sendMessage(Msg.c("  &7Slot &f9 &7= Salir de la arena"));
+        p.sendMessage(Msg.c("  &7Equipo asignado: " + tc + "&l" + tn));
+        p.sendMessage(Msg.c("  &7Slot &f8 &7= &e⚑ Elegir equipo"));
+        p.sendMessage(Msg.c("  &7Slot &f9 &7= &c✗ Salir de la arena"));
         p.sendMessage(Msg.sep());
 
-        // Titulo de bienvenida
+        // Título de bienvenida
         p.sendTitle(
             Msg.c("&b&lAdvancedPaintball"),
             Msg.c(tc + "Equipo " + tn + " &8| &7Esperando jugadores..."),
@@ -143,12 +146,10 @@ public class GameManager {
         prepare(p);
         p.setGameMode(GameMode.SPECTATOR);
         if (arena.getLobby() != null) p.teleport(arena.getLobby());
-
-        // Item salir para espectador
         p.getInventory().setItem(8, getLeaveItem());
-
-        p.sendMessage(Msg.ok("Estás observando &f" + arena.getName() + "&a."));
-        p.sendTitle(Msg.c("&7Modo Espectador"), Msg.c("&f" + arena.getName()), 10, 40, 10);
+        p.sendMessage(Msg.ok("Estás observando &f" + arena.getName()));
+        p.sendTitle(Msg.c("&7Modo Espectador"),
+            Msg.c("&f" + arena.getName()), 10, 40, 10);
     }
 
     // ── LEAVE ─────────────────────────────────────────────────────────────────
@@ -163,45 +164,45 @@ public class GameManager {
         if (game == null) { pArena.remove(p.getUniqueId()); return; }
 
         boolean wasInGame = game.getState() == Game.State.IN_GAME;
-        Team leavingTeam  = game.getTeam(p);
-
         game.removePlayer(p);
         pArena.remove(p.getUniqueId());
         plugin.getScoreboardManager().remove(p);
 
-        // Devolver inventario y teletransportar al lobby principal
+        // Devolver inventario
         plugin.getInventoryBackupManager().restore(p);
         restore(p);
+
+        // Teleportar al lobby principal
         Location mainLobby = getMainLobby();
         if (mainLobby != null) p.teleport(mainLobby);
 
         p.sendMessage(Msg.ok("Saliste de la arena. &7Tu inventario fue devuelto."));
-        p.sendTitle(Msg.c("&7Saliste de la arena"), Msg.c("&fHasta la próxima!"), 5, 40, 10);
+        p.sendTitle(Msg.c("&7Saliste"),
+            Msg.c("&fHasta la próxima!"), 5, 40, 10);
 
         broadcast(game, Msg.prefix("&e" + p.getName() + " &7abandonó la partida."));
 
-        // Si partida en curso y queda 1 equipo = ese equipo gana
+        // Si estaba en partida y queda 1 equipo ese gana
         if (wasInGame) {
-            Team remainingTeam = getRemainingTeam(game);
-            if (remainingTeam != null) {
-                endGame(game, remainingTeam);
+            Team remaining = getRemainingTeam(game);
+            if (remaining != null) {
+                endGame(game, remaining);
                 return;
             }
         }
 
-        // Si en lobby y quedan pocos
+        // Si en lobby y quedan pocos jugadores
         if (game.getState() == Game.State.STARTING
                 && game.totalActive() < game.getArena().getMinPlayers()) {
             game.setState(Game.State.WAITING);
             cancelTask(game);
-            broadcast(game, Msg.info("Jugadores insuficientes. Esperando más jugadores..."));
-            // Mostrar titulo de espera a los que quedan
+            broadcast(game, Msg.info("Jugadores insuficientes. Esperando más..."));
             game.getOnlinePlayers().forEach(pl -> {
-                pl.getInventory().setItem(7, getTeamItem());
-                pl.getInventory().setItem(8, getLeaveItem());
+                giveLobbyItems(pl);
                 pl.sendTitle(
                     Msg.c("&e&lEsperando jugadores"),
-                    Msg.c("&7Necesitas &f" + game.getArena().getMinPlayers() + " &7jugadores"),
+                    Msg.c("&7Necesitas &f" + game.getArena().getMinPlayers()
+                        + " &7jugadores mínimo"),
                     5, 60, 10);
             });
         }
@@ -238,53 +239,49 @@ public class GameManager {
         game.setState(Game.State.STARTING);
         game.setCountdown(10);
 
-        int active   = game.totalActive();
-        String modo  = active <= 2 ? "1v1" : active <= 4 ? "2v2" : active <= 6 ? "3v3" : "4v4";
+        int active  = game.totalActive();
+        String modo = active <= 2 ? "1v1"
+                    : active <= 4 ? "2v2"
+                    : active <= 6 ? "3v3" : "4v4";
 
         broadcast(game, Msg.sep());
         broadcast(game, Msg.c("  &b&lPartida encontrada! Modo: &e" + modo));
-        broadcast(game, Msg.c("  &7La partida comienza en &e10 segundos&7!"));
+        broadcast(game, Msg.c("  &7Comienza en &e10 segundos&7!"));
         broadcast(game, Msg.sep());
 
         BukkitTask t = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             int cd = game.getCountdown();
 
-            // Cancelar si faltan jugadores
             if (game.totalActive() < game.getArena().getMinPlayers()) {
                 game.setState(Game.State.WAITING);
                 cancelTask(game);
-                broadcast(game, Msg.info("Jugadores insuficientes. Cancelado. Esperando..."));
+                broadcast(game, Msg.info("Cancelado. Esperando más jugadores..."));
                 game.getOnlinePlayers().forEach(pl -> {
+                    giveLobbyItems(pl);
                     pl.sendTitle(
                         Msg.c("&c&lCancelado"),
                         Msg.c("&7Esperando más jugadores..."),
                         5, 50, 10);
-                    pl.playSound(pl.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
-                    // Re-dar items
-                    pl.getInventory().setItem(7, getTeamItem());
-                    pl.getInventory().setItem(8, getLeaveItem());
+                    pl.playSound(pl.getLocation(),
+                        Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
                 });
                 return;
             }
 
-            // Titulos del countdown
             game.getOnlinePlayers().forEach(pl -> {
-                String color = cd <= 3 ? "&c&l" : cd <= 6 ? "&e&l" : "&a&l";
+                String color = cd <= 3 ? "&c&l"
+                             : cd <= 6 ? "&e&l" : "&a&l";
                 pl.sendTitle(
                     Msg.c(color + cd),
                     Msg.c("&7¡La partida está por comenzar!"),
-                    2, 18, 2
-                );
+                    2, 18, 2);
                 pl.playSound(pl.getLocation(),
-                    cd <= 3 ? Sound.BLOCK_NOTE_BLOCK_BASS : Sound.BLOCK_NOTE_BLOCK_PLING,
+                    cd <= 3 ? Sound.BLOCK_NOTE_BLOCK_BASS
+                            : Sound.BLOCK_NOTE_BLOCK_PLING,
                     1f, cd <= 3 ? 0.5f : 1.2f);
             });
 
-            if (cd <= 0) {
-                cancelTask(game);
-                startGame(game);
-                return;
-            }
+            if (cd <= 0) { cancelTask(game); startGame(game); return; }
             game.setCountdown(cd - 1);
         }, 0L, 20L);
         game.setTaskId(t.getTaskId());
@@ -300,7 +297,8 @@ public class GameManager {
         broadcast(game, Msg.sep());
         broadcast(game, Msg.c("    &b&l⚡ ¡PAINTBALL INICIADO!"));
         broadcast(game, Msg.c("    &c❤Rojo &8| &d✿Rosa &8| &a✦Verde &8| &e★Amarillo"));
-        broadcast(game, Msg.c("    &7Kills para ganar: &e" + game.getArena().getKillsToWin()));
+        broadcast(game, Msg.c("    &7Kills para ganar: &e"
+            + game.getArena().getKillsToWin()));
         broadcast(game, Msg.c("    &7Tiempo: &e5 minutos"));
         broadcast(game, Msg.sep());
 
@@ -309,8 +307,10 @@ public class GameManager {
                 Msg.c("&b&l¡PAINTBALL!"),
                 Msg.c("&7¡A eliminar al equipo contrario!"),
                 10, 50, 10);
-            pl.playSound(pl.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1f);
-            pl.playSound(pl.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1f, 1f);
+            pl.playSound(pl.getLocation(),
+                Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1f);
+            pl.playSound(pl.getLocation(),
+                Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1f, 1f);
         });
 
         // Timer de partida
@@ -321,7 +321,8 @@ public class GameManager {
                 broadcast(game, Msg.info("&eQuedan &c" + tl + "s &ede partida!"));
                 if (tl <= 10) {
                     game.getOnlinePlayers().forEach(pl ->
-                        pl.playSound(pl.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f));
+                        pl.playSound(pl.getLocation(),
+                            Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f));
                 }
             }
             game.setTimeLeft(tl - 1);
@@ -360,7 +361,11 @@ public class GameManager {
         victim.getWorld().playSound(victim.getLocation(),
             Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 1f);
 
-        // Partículas de pintura
+        // Partículas personalizadas del killer
+        plugin.getParticleSelectorGUI()
+            .spawnKillParticle(killer, victim.getLocation());
+
+        // Partículas de pintura del equipo asesino
         Color paintColor = switch (game.getTeam(killer)) {
             case RED    -> Color.RED;
             case PINK   -> Color.FUCHSIA;
@@ -376,6 +381,7 @@ public class GameManager {
         // Mensajes
         String streakMsg = streak >= streakNeeded
             ? Msg.c(" &6&l[RACHA x" + streak + "! x" + multiplier + " coins]") : "";
+
         broadcast(game, Msg.c(teamColor(game.getTeam(killer))
             + "⚡ " + killer.getName()
             + " &7eliminó a &e" + victim.getName() + streakMsg
@@ -390,13 +396,15 @@ public class GameManager {
             Msg.c("&a&l+1 Kill!"),
             Msg.c("&e+" + earned + " coins"),
             5, 20, 5);
-        killer.playSound(killer.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
+        killer.playSound(killer.getLocation(),
+            Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
 
         victim.sendTitle(
             Msg.c("&c&l⚡ Eliminado!"),
             Msg.c("&7Reapareciendo en 3 segundos..."),
             5, 50, 10);
-        victim.playSound(victim.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 1f, 0.8f);
+        victim.playSound(victim.getLocation(),
+            Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 1f, 0.8f);
 
         // Respawn en 3s con zona segura
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -409,18 +417,19 @@ public class GameManager {
             victim.teleport(spawn);
             victim.setHealth(20);
             victim.setFoodLevel(20);
-            KitUtils.give(victim, vt, plugin.getStatsManager().get(victim).getKit());
+            KitUtils.give(victim, vt,
+                plugin.getStatsManager().get(victim).getKit());
             game.addSafe(victim);
             victim.sendTitle(
                 Msg.c("&a✔ Reapareciste"),
                 Msg.c("&7Zona segura por 3 segundos"),
                 5, 20, 5);
-            // Quitar zona segura después de 3s
-            Bukkit.getScheduler().runTaskLater(plugin, () -> game.removeSafe(victim), 60L);
+            Bukkit.getScheduler().runTaskLater(plugin,
+                () -> game.removeSafe(victim), 60L);
             plugin.getScoreboardManager().update(victim, game);
         }, 60L);
 
-        // Verificar condición de victoria por kills
+        // Verificar condición de victoria
         int needed = game.getArena().getKillsToWin();
         for (Team t : new Team[]{Team.RED, Team.PINK, Team.GREEN, Team.YELLOW}) {
             if (needed > 0 && game.getTeamScore(t) >= needed) {
@@ -440,7 +449,7 @@ public class GameManager {
         game.setState(Game.State.ENDING);
         cancelTask(game);
 
-        Team winner = forceWinner != null ? forceWinner : game.getWinnerByScore();
+        Team winner    = forceWinner != null ? forceWinner : game.getWinnerByScore();
         String winColor = winner != null ? teamColor(winner) : "&e";
         String winName  = winner != null ? teamName(winner) : "EMPATE";
 
@@ -453,15 +462,16 @@ public class GameManager {
         }
 
         broadcast(game, Msg.sep());
-        broadcast(game, Msg.c("  " + winColor + "&l🏆 " + winName.toUpperCase() + " GANA!"));
-        broadcast(game, Msg.c("  &c❤ Rojo:     &f" + game.getScoreRed() + " kills"));
-        broadcast(game, Msg.c("  &d✿ Rosa:     &f" + game.getScorePink() + " kills"));
-        broadcast(game, Msg.c("  &a✦ Verde:    &f" + game.getScoreGreen() + " kills"));
-        broadcast(game, Msg.c("  &e★ Amarillo: &f" + game.getScoreYellow() + " kills"));
+        broadcast(game, Msg.c("  " + winColor + "&l🏆 "
+            + winName.toUpperCase() + " GANA!"));
+        broadcast(game, Msg.c("  &c❤ Rojo:     &f" + game.getScoreRed()));
+        broadcast(game, Msg.c("  &d✿ Rosa:     &f" + game.getScorePink()));
+        broadcast(game, Msg.c("  &a✦ Verde:    &f" + game.getScoreGreen()));
+        broadcast(game, Msg.c("  &e★ Amarillo: &f" + game.getScoreYellow()));
         broadcast(game, Msg.c("  &6⭐ MVP: &e" + mvpName));
         broadcast(game, Msg.sep());
 
-        // Recompensar ganadores
+        // Recompensar ganadores + cuetes
         final Team finalWinner = winner;
         if (finalWinner != null) {
             game.getTeamPlayers(finalWinner).forEach(uid -> {
@@ -473,12 +483,11 @@ public class GameManager {
                     plugin.getMissionManager().onWin(pl);
                     plugin.getRankManager().addXp(pl, 50);
 
-                    // 🎆 Cuetes y partículas para ganadores
+                    // Cuetes y partículas de celebración
                     for (int i = 0; i < 6; i++) {
                         final int delay = i * 15;
                         Bukkit.getScheduler().runTaskLater(plugin, () -> {
                             FireworkUtils.launchTeam(pl.getLocation(), finalWinner);
-                            // Partículas de celebración
                             pl.getWorld().spawnParticle(
                                 Particle.HAPPY_VILLAGER,
                                 pl.getLocation().add(0, 1, 0),
@@ -507,18 +516,22 @@ public class GameManager {
                     Msg.c("&7¡Gracias por jugar! &6+50 coins"),
                     0, 25, 0));
         }, 0L, 8L);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> titleAnim.cancel(), 100L);
+        Bukkit.getScheduler().runTaskLater(plugin,
+            () -> titleAnim.cancel(), 100L);
 
         // Sonidos de victoria
         game.getOnlinePlayers().forEach(pl -> {
             plugin.getStatsManager().get(pl).addGame();
-            pl.playSound(pl.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
-            pl.playSound(pl.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LARGE_BLAST, 1f, 1f);
+            pl.playSound(pl.getLocation(),
+                Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            pl.playSound(pl.getLocation(),
+                Sound.ENTITY_FIREWORK_ROCKET_LARGE_BLAST, 1f, 1f);
             plugin.getScoreboardManager().remove(pl);
         });
 
         plugin.getStatsManager().saveAll();
-        broadcast(game, Msg.info("&e¿Revancha? Escribe &f/pa &epara unirte de nuevo!"));
+        broadcast(game, Msg.info(
+            "&e¿Revancha? Escribe &f/pa &epara unirte de nuevo!"));
 
         // Regresar al lobby en 6s
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -526,9 +539,7 @@ public class GameManager {
             new HashSet<>(game.getPlayers().keySet()).forEach(uid -> {
                 Player pl = Bukkit.getPlayer(uid);
                 if (pl != null) {
-                    // Limpiar inventario (no se llevan nada)
                     pl.getInventory().clear();
-                    // Devolver inventario original
                     plugin.getInventoryBackupManager().restore(pl);
                     if (mainLobby != null) pl.teleport(mainLobby);
                     pl.setGameMode(GameMode.SURVIVAL);
@@ -544,25 +555,55 @@ public class GameManager {
         new ArrayList<>(games.values()).forEach(g -> endGame(g, null));
     }
 
-    // ── Determinar equipo restante si alguien se sale ─────────────────────────
+    // ── Equipo restante si alguien se sale ────────────────────────────────────
 
     private Team getRemainingTeam(Game game) {
-        Set<Team> teamsWithPlayers = new HashSet<>();
-        for (Map.Entry<UUID, Team> entry : game.getPlayers().entrySet()) {
-            if (entry.getValue() != Team.SPECTATOR) {
-                teamsWithPlayers.add(entry.getValue());
-            }
-        }
-        // Si solo queda 1 equipo ese gana
-        if (teamsWithPlayers.size() == 1) {
-            return teamsWithPlayers.iterator().next();
-        }
-        // Si no quedan jugadores
-        if (teamsWithPlayers.isEmpty()) return null;
+        Set<Team> teams = new HashSet<>();
+        game.getPlayers().forEach((uid, t) -> {
+            if (t != Team.SPECTATOR) teams.add(t);
+        });
+        if (teams.size() == 1) return teams.iterator().next();
         return null;
     }
 
-    // ── Spawn de todos los equipos ────────────────────────────────────────────
+    // ── Equipar armadura del equipo ───────────────────────────────────────────
+
+    public void equipTeamArmor(Player p, Team team) {
+        Color color = switch (team) {
+            case RED    -> Color.RED;
+            case PINK   -> Color.FUCHSIA;
+            case GREEN  -> Color.GREEN;
+            case YELLOW -> Color.YELLOW;
+            default     -> Color.WHITE;
+        };
+        String prefix = switch (team) {
+            case RED    -> "&c";
+            case PINK   -> "&d";
+            case GREEN  -> "&a";
+            case YELLOW -> "&e";
+            default     -> "&f";
+        };
+        p.getInventory().setHelmet(
+            leatherArmor(Material.LEATHER_HELMET, color, prefix + "Casco"));
+        p.getInventory().setChestplate(
+            leatherArmor(Material.LEATHER_CHESTPLATE, color, prefix + "Pecho"));
+        p.getInventory().setLeggings(
+            leatherArmor(Material.LEATHER_LEGGINGS, color, prefix + "Pantalón"));
+        p.getInventory().setBoots(
+            leatherArmor(Material.LEATHER_BOOTS, color, prefix + "Botas"));
+    }
+
+    private ItemStack leatherArmor(Material mat, Color color, String name) {
+        ItemStack item = new ItemStack(mat);
+        org.bukkit.inventory.meta.LeatherArmorMeta meta =
+            (org.bukkit.inventory.meta.LeatherArmorMeta) item.getItemMeta();
+        meta.setColor(color);
+        meta.setDisplayName(Msg.c(name));
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    // ── Spawn todos los equipos ───────────────────────────────────────────────
 
     private void spawnAll(Game game) {
         for (Team t : new Team[]{Team.RED, Team.PINK, Team.GREEN, Team.YELLOW}) {
@@ -576,7 +617,8 @@ public class GameManager {
                 pl.setHealth(20);
                 pl.setFoodLevel(20);
                 pl.setGameMode(GameMode.SURVIVAL);
-                KitUtils.give(pl, t, plugin.getStatsManager().get(pl).getKit());
+                KitUtils.give(pl, t,
+                    plugin.getStatsManager().get(pl).getKit());
                 plugin.getScoreboardManager().update(pl, game);
             }
         }
@@ -607,7 +649,10 @@ public class GameManager {
 
     public void teamChat(Player p, String message) {
         Game game = getGame(p);
-        if (game == null) { p.sendMessage(Msg.err("No estás en ninguna partida.")); return; }
+        if (game == null) {
+            p.sendMessage(Msg.err("No estás en ninguna partida."));
+            return;
+        }
         Team team = game.getTeam(p);
         String msg = Msg.c(teamColor(team) + "[" + teamName(team) + "] &7"
             + p.getName() + ": &f" + message);
@@ -627,7 +672,8 @@ public class GameManager {
         p.setFireTicks(0);
         p.setLevel(0);
         p.setExp(0f);
-        p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
+        p.getActivePotionEffects()
+            .forEach(e -> p.removePotionEffect(e.getType()));
     }
 
     public void restore(Player p) {
@@ -638,7 +684,8 @@ public class GameManager {
         p.setFireTicks(0);
         p.setLevel(0);
         p.setExp(0f);
-        p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
+        p.getActivePotionEffects()
+            .forEach(e -> p.removePotionEffect(e.getType()));
     }
 
     // ── Cancelar tarea ────────────────────────────────────────────────────────
@@ -690,8 +737,8 @@ public class GameManager {
         };
     }
 
-    public Game    getGame(Player p)          { String n = pArena.get(p.getUniqueId()); return n != null ? games.get(n) : null; }
-    public Game    getGameByArena(String n)   { return games.get(n); }
-    public boolean inGame(Player p)           { return pArena.containsKey(p.getUniqueId()); }
-    public Map<String, Game> all()            { return games; }
+    public Game    getGame(Player p)        { String n = pArena.get(p.getUniqueId()); return n != null ? games.get(n) : null; }
+    public Game    getGameByArena(String n) { return games.get(n); }
+    public boolean inGame(Player p)         { return pArena.containsKey(p.getUniqueId()); }
+    public Map<String, Game> all()          { return games; }
 }
