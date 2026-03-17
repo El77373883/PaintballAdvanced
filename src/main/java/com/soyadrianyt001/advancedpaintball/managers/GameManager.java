@@ -740,5 +740,20 @@ public class GameManager {
     public Game    getGame(Player p)        { String n = pArena.get(p.getUniqueId()); return n != null ? games.get(n) : null; }
     public Game    getGameByArena(String n) { return games.get(n); }
     public boolean inGame(Player p)         { return pArena.containsKey(p.getUniqueId()); }
-    public Map<String, Game> all()          { return games; }
+    public Map<String, Game> all() 
+    { return games; }
+   
+        };
+    }
+
+public void globalChat(Player p, String message) {
+    String rank  = plugin.getRankManager().getFormattedRank(
+        plugin.getStatsManager().get(p));
+    String clan  = plugin.getClanManager().inClan(p)
+        ? Msg.c(" &8[&b" + plugin.getClanManager().getTag(
+            plugin.getClanManager().getClan(p)) + "&8]") : "";
+    String msg   = Msg.c("&8[&aGlobal&8]" + clan + " " + rank
+        + " &f" + p.getName() + " &8» &7" + message);
+    org.bukkit.Bukkit.getOnlinePlayers().forEach(pl -> pl.sendMessage(msg));
+
 }
