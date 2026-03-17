@@ -1,0 +1,17 @@
+# AdvancedPaintball - by SoyAdrianYT001
+countdown: 10
+game-time: 300
+win-kills: 30
+coins-hit: 3
+coins-win: 50
+streak-kills: 3
+streak-multiplier: 2
+safe-spawn-seconds: 3
+snowball-price: 5
+language: "es"
+server-name: "play.tuservidor.net"
+kit-prices:
+  default: 0
+  sniper: 100
+  assault: 150
+  heavy: 200
