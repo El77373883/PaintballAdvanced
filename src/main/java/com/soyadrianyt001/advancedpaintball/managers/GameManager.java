@@ -77,33 +77,25 @@ public class GameManager {
             return false;
         }
 
-        // Guardar inventario original
         plugin.getInventoryBackupManager().backup(p);
 
         Team team = balanceTeam(game);
         game.addPlayer(p, team);
         pArena.put(p.getUniqueId(), arena.getName());
 
-        // Preparar jugador
         prepare(p);
 
-        // Teleportar al lobby de la arena
         if (arena.getLobby() != null) p.teleport(arena.getLobby());
 
-        // Dar 2 stacks de snowballs
         p.getInventory().addItem(new ItemStack(Material.SNOWBALL, 64));
         p.getInventory().addItem(new ItemStack(Material.SNOWBALL, 64));
 
-        // Dar items de lobby en slots 7 y 8
         giveLobbyItems(p);
-
-        // Equipar armadura del equipo automáticamente
         equipTeamArmor(p, team);
 
         String tc = teamColor(team);
         String tn = teamName(team);
 
-        // Mensaje de bienvenida
         p.sendMessage(Msg.sep());
         p.sendMessage(Msg.c("  &b&lAdvancedPaintball &8▸ &f" + arena.getName()));
         p.sendMessage(Msg.c("  &7Equipo asignado: " + tc + "&l" + tn));
@@ -111,7 +103,6 @@ public class GameManager {
         p.sendMessage(Msg.c("  &7Slot &f9 &7= &c✗ Salir de la arena"));
         p.sendMessage(Msg.sep());
 
-        // Título de bienvenida
         p.sendTitle(
             Msg.c("&b&lAdvancedPaintball"),
             Msg.c(tc + "Equipo " + tn + " &8| &7Esperando jugadores..."),
@@ -168,11 +159,9 @@ public class GameManager {
         pArena.remove(p.getUniqueId());
         plugin.getScoreboardManager().remove(p);
 
-        // Devolver inventario
         plugin.getInventoryBackupManager().restore(p);
         restore(p);
 
-        // Teleportar al lobby principal
         Location mainLobby = getMainLobby();
         if (mainLobby != null) p.teleport(mainLobby);
 
@@ -182,7 +171,6 @@ public class GameManager {
 
         broadcast(game, Msg.prefix("&e" + p.getName() + " &7abandonó la partida."));
 
-        // Si estaba en partida y queda 1 equipo ese gana
         if (wasInGame) {
             Team remaining = getRemainingTeam(game);
             if (remaining != null) {
@@ -191,7 +179,6 @@ public class GameManager {
             }
         }
 
-        // Si en lobby y quedan pocos jugadores
         if (game.getState() == Game.State.STARTING
                 && game.totalActive() < game.getArena().getMinPlayers()) {
             game.setState(Game.State.WAITING);
@@ -313,7 +300,6 @@ public class GameManager {
                 Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1f, 1f);
         });
 
-        // Timer de partida
         BukkitTask t = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             int tl = game.getTimeLeft();
             if (tl <= 0) { cancelTask(game); endGame(game, null); return; }
@@ -356,16 +342,13 @@ public class GameManager {
         plugin.getRankManager().addXp(killer, 10);
         plugin.getMissionManager().onKill(killer);
 
-        // ⚡ Trueno donde murió el jugador
         victim.getWorld().strikeLightningEffect(victim.getLocation());
         victim.getWorld().playSound(victim.getLocation(),
             Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 1f);
 
-        // Partículas personalizadas del killer
         plugin.getParticleSelectorGUI()
             .spawnKillParticle(killer, victim.getLocation());
 
-        // Partículas de pintura del equipo asesino
         Color paintColor = switch (game.getTeam(killer)) {
             case RED    -> Color.RED;
             case PINK   -> Color.FUCHSIA;
@@ -378,7 +361,6 @@ public class GameManager {
             0.5, 0.8, 0.5,
             new Particle.DustOptions(paintColor, 3f));
 
-        // Mensajes
         String streakMsg = streak >= streakNeeded
             ? Msg.c(" &6&l[RACHA x" + streak + "! x" + multiplier + " coins]") : "";
 
@@ -406,7 +388,6 @@ public class GameManager {
         victim.playSound(victim.getLocation(),
             Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 1f, 0.8f);
 
-        // Respawn en 3s con zona segura
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!pArena.containsKey(victim.getUniqueId())) return;
             Team vt = game.getTeam(victim);
@@ -429,7 +410,6 @@ public class GameManager {
             plugin.getScoreboardManager().update(victim, game);
         }, 60L);
 
-        // Verificar condición de victoria
         int needed = game.getArena().getKillsToWin();
         for (Team t : new Team[]{Team.RED, Team.PINK, Team.GREEN, Team.YELLOW}) {
             if (needed > 0 && game.getTeamScore(t) >= needed) {
@@ -449,11 +429,10 @@ public class GameManager {
         game.setState(Game.State.ENDING);
         cancelTask(game);
 
-        Team winner    = forceWinner != null ? forceWinner : game.getWinnerByScore();
+        Team winner     = forceWinner != null ? forceWinner : game.getWinnerByScore();
         String winColor = winner != null ? teamColor(winner) : "&e";
         String winName  = winner != null ? teamName(winner) : "EMPATE";
 
-        // MVP
         UUID mvpUid    = game.getMVP();
         String mvpName = "N/A";
         if (mvpUid != null) {
@@ -471,7 +450,6 @@ public class GameManager {
         broadcast(game, Msg.c("  &6⭐ MVP: &e" + mvpName));
         broadcast(game, Msg.sep());
 
-        // Recompensar ganadores + cuetes
         final Team finalWinner = winner;
         if (finalWinner != null) {
             game.getTeamPlayers(finalWinner).forEach(uid -> {
@@ -483,7 +461,6 @@ public class GameManager {
                     plugin.getMissionManager().onWin(pl);
                     plugin.getRankManager().addXp(pl, 50);
 
-                    // Cuetes y partículas de celebración
                     for (int i = 0; i < 6; i++) {
                         final int delay = i * 15;
                         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -502,7 +479,6 @@ public class GameManager {
             });
         }
 
-        // Título animado parpadeante
         final String[] colors = {"&c", "&e", "&a", "&b", "&d", "&6"};
         final int[] frame = {0};
         BukkitTask titleAnim = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -519,7 +495,6 @@ public class GameManager {
         Bukkit.getScheduler().runTaskLater(plugin,
             () -> titleAnim.cancel(), 100L);
 
-        // Sonidos de victoria
         game.getOnlinePlayers().forEach(pl -> {
             plugin.getStatsManager().get(pl).addGame();
             pl.playSound(pl.getLocation(),
@@ -533,7 +508,6 @@ public class GameManager {
         broadcast(game, Msg.info(
             "&e¿Revancha? Escribe &f/pa &epara unirte de nuevo!"));
 
-        // Regresar al lobby en 6s
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Location mainLobby = getMainLobby();
             new HashSet<>(game.getPlayers().keySet()).forEach(uid -> {
@@ -665,14 +639,14 @@ public class GameManager {
     // ── Global chat ───────────────────────────────────────────────────────────
 
     public void globalChat(Player p, String message) {
-        String rank  = plugin.getRankManager().getFormattedRank(
+        String rank = plugin.getRankManager().getFormattedRank(
             plugin.getStatsManager().get(p));
-        String clan  = plugin.getClanManager().inClan(p)
+        String clan = plugin.getClanManager().inClan(p)
             ? Msg.c(" &8[&b" + plugin.getClanManager().getTag(
                 plugin.getClanManager().getClan(p)) + "&8]") : "";
-        String msg   = Msg.c("&8[&aGlobal&8]" + clan + " " + rank
+        String msg  = Msg.c("&8[&aGlobal&8]" + clan + " " + rank
             + " &f" + p.getName() + " &8» &7" + message);
-        org.bukkit.Bukkit.getOnlinePlayers().forEach(pl -> pl.sendMessage(msg));
+        Bukkit.getOnlinePlayers().forEach(pl -> pl.sendMessage(msg));
     }
 
     // ── Preparar jugador ──────────────────────────────────────────────────────
