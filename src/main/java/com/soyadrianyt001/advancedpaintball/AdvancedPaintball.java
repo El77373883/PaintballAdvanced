@@ -5,6 +5,7 @@ import com.soyadrianyt001.advancedpaintball.commands.PACommand;
 import com.soyadrianyt001.advancedpaintball.gui.AdminPanelGUI;
 import com.soyadrianyt001.advancedpaintball.gui.ArenaMenuGUI;
 import com.soyadrianyt001.advancedpaintball.gui.KitShopGUI;
+import com.soyadrianyt001.advancedpaintball.gui.TeamSelectorGUI;
 import com.soyadrianyt001.advancedpaintball.listeners.GameListener;
 import com.soyadrianyt001.advancedpaintball.listeners.ShootListener;
 import com.soyadrianyt001.advancedpaintball.listeners.TrailListener;
@@ -29,25 +30,27 @@ public class AdvancedPaintball extends JavaPlugin {
     private ArenaMenuGUI arenaMenuGUI;
     private AdminPanelGUI adminPanelGUI;
     private KitShopGUI kitShopGUI;
+    private TeamSelectorGUI teamSelectorGUI;
 
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
 
-        arenaManager = new ArenaManager(this);
-        statsManager = new StatsManager(this);
-        rankManager = new RankManager(this);
-        missionManager = new MissionManager(this);
+        arenaManager           = new ArenaManager(this);
+        statsManager           = new StatsManager(this);
+        rankManager            = new RankManager(this);
+        missionManager         = new MissionManager(this);
         inventoryBackupManager = new InventoryBackupManager(this);
-        gameManager = new GameManager(this);
-        scoreboardManager = new ScoreboardManager(this);
-        wandManager = new WandManager(this);
-        shopNPC = new ShopNPC(this);
+        gameManager            = new GameManager(this);
+        scoreboardManager      = new ScoreboardManager(this);
+        wandManager            = new WandManager(this);
+        shopNPC                = new ShopNPC(this);
 
-        arenaMenuGUI = new ArenaMenuGUI(this);
-        adminPanelGUI = new AdminPanelGUI(this);
-        kitShopGUI = new KitShopGUI(this);
+        arenaMenuGUI    = new ArenaMenuGUI(this);
+        adminPanelGUI   = new AdminPanelGUI(this);
+        kitShopGUI      = new KitShopGUI(this);
+        teamSelectorGUI = new TeamSelectorGUI(this);
 
         PACommand paCmd = new PACommand(this);
         getCommand("pa").setExecutor(paCmd);
@@ -64,6 +67,7 @@ public class AdvancedPaintball extends JavaPlugin {
         getServer().getPluginManager().registerEvents(arenaMenuGUI, this);
         getServer().getPluginManager().registerEvents(adminPanelGUI, this);
         getServer().getPluginManager().registerEvents(kitShopGUI, this);
+        getServer().getPluginManager().registerEvents(teamSelectorGUI, this);
 
         banner();
     }
@@ -90,18 +94,18 @@ public class AdvancedPaintball extends JavaPlugin {
         return ChatColor.translateAlternateColorCodes('&', s);
     }
 
-    public static AdvancedPaintball get() { return instance; }
-    public ArenaManager getArenaManager() { return arenaManager; }
-    public GameManager getGameManager() { return gameManager; }
-    public StatsManager getStatsManager() { return statsManager; }
-    public ScoreboardManager getScoreboardManager() { return scoreboardManager; }
-    public WandManager getWandManager() { return wandManager; }
-    public MissionManager getMissionManager() { return missionManager; }
-    public RankManager getRankManager() { return rankManager; }
+    public static AdvancedPaintball get()             { return instance; }
+    public ArenaManager getArenaManager()             { return arenaManager; }
+    public GameManager getGameManager()               { return gameManager; }
+    public StatsManager getStatsManager()             { return statsManager; }
+    public ScoreboardManager getScoreboardManager()   { return scoreboardManager; }
+    public WandManager getWandManager()               { return wandManager; }
+    public MissionManager getMissionManager()         { return missionManager; }
+    public RankManager getRankManager()               { return rankManager; }
     public InventoryBackupManager getInventoryBackupManager() { return inventoryBackupManager; }
-    public ShopNPC getShopNPC() { return shopNPC; }
-    public ArenaMenuGUI getArenaMenuGUI() { return arenaMenuGUI; }
-    public AdminPanelGUI getAdminPanelGUI() { return adminPanelGUI; }
-    public KitShopGUI getKitShopGUI() { return kitShopGUI; }
+    public ShopNPC getShopNPC()                       { return shopNPC; }
+    public ArenaMenuGUI getArenaMenuGUI()             { return arenaMenuGUI; }
+    public AdminPanelGUI getAdminPanelGUI()           { return adminPanelGUI; }
+    public KitShopGUI getKitShopGUI()                 { return kitShopGUI; }
+    public TeamSelectorGUI getTeamSelectorGUI()       { return teamSelectorGUI; }
 }
-
