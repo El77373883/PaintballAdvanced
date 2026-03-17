@@ -733,8 +733,8 @@ public class GameManager {
             case PINK   -> "Rosa";
             case GREEN  -> "Verde";
             case YELLOW -> "Amarillo";
-            default     -> "Espectador";
-        };
+            default     -> "
+                        };
     }
     public Game    getGame(Player p)        { String n = pArena.get(p.getUniqueId()); return n != null ? games.get(n) : null; }
     public Game    getGameByArena(String n) { return games.get(n); }
