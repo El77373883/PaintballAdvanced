@@ -10,8 +10,26 @@ safe-spawn-seconds: 3
 snowball-price: 5
 language: "es"
 server-name: "play.tuservidor.net"
+
 kit-prices:
   default: 0
   sniper: 100
   assault: 150
   heavy: 200
+
+# Autosave cada 5 minutos
+autosave-interval: 300
+
+# MySQL (opcional)
+mysql:
+  enabled: false
+  host: localhost
+  port: 3306
+  database: paintball
+  username: root
+  password: ""
+
+# Chat
+chat:
+  format: true
+  show-rank: true
