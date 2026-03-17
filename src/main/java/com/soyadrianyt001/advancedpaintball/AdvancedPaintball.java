@@ -15,7 +15,7 @@ public class AdvancedPaintball extends JavaPlugin {
 
     private static AdvancedPaintball instance;
 
-    // Managers
+    // ── Managers ──────────────────────────────────────────────────────────────
     private ArenaManager arenaManager;
     private GameManager gameManager;
     private StatsManager statsManager;
@@ -27,14 +27,14 @@ public class AdvancedPaintball extends JavaPlugin {
     private ChatManager chatManager;
     private MySQLManager mySQLManager;
 
-    // GUIs
+    // ── GUIs ──────────────────────────────────────────────────────────────────
     private MainMenuGUI mainMenuGUI;
     private AdminPanelGUI adminPanelGUI;
     private ArenaSelectorGUI arenaSelectorGUI;
     private ShopGUI shopGUI;
     private TeamSelectorGUI teamSelectorGUI;
 
-    // NPC
+    // ── NPC ───────────────────────────────────────────────────────────────────
     private ShopNPC shopNPC;
 
     @Override
@@ -42,7 +42,7 @@ public class AdvancedPaintball extends JavaPlugin {
         instance = this;
         saveDefaultConfig();
 
-        // Managers en orden
+        // Managers en orden correcto
         mySQLManager           = new MySQLManager(this);
         arenaManager           = new ArenaManager(this);
         statsManager           = new StatsManager(this);
@@ -56,11 +56,11 @@ public class AdvancedPaintball extends JavaPlugin {
         shopNPC                = new ShopNPC(this);
 
         // GUIs
-        mainMenuGUI     = new MainMenuGUI(this);
-        adminPanelGUI   = new AdminPanelGUI(this);
+        mainMenuGUI      = new MainMenuGUI(this);
+        adminPanelGUI    = new AdminPanelGUI(this);
         arenaSelectorGUI = new ArenaSelectorGUI(this);
-        shopGUI         = new ShopGUI(this);
-        teamSelectorGUI = new TeamSelectorGUI(this);
+        shopGUI          = new ShopGUI(this);
+        teamSelectorGUI  = new TeamSelectorGUI(this);
 
         // Comandos
         PACommand paCmd = new PACommand(this);
@@ -91,13 +91,12 @@ public class AdvancedPaintball extends JavaPlugin {
         }
 
         // Autosave cada 5 minutos
-        int interval = getConfig().getInt("autosave-interval", 300) * 20L > 0
-            ? getConfig().getInt("autosave-interval", 300) : 300;
+        long interval = getConfig().getInt("autosave-interval", 300) * 20L;
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
             statsManager.saveAll();
             missionManager.saveAll();
             getLogger().info("§7[AdvancedPaintball] Autosave completado.");
-        }, interval * 20L, interval * 20L);
+        }, interval, interval);
 
         banner();
     }
@@ -126,7 +125,7 @@ public class AdvancedPaintball extends JavaPlugin {
         return ChatColor.translateAlternateColorCodes('&', s);
     }
 
-    // Getters
+    // ── Getters ───────────────────────────────────────────────────────────────
     public static AdvancedPaintball get()             { return instance; }
     public ArenaManager getArenaManager()             { return arenaManager; }
     public GameManager getGameManager()               { return gameManager; }
