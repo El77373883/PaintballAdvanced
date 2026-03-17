@@ -1,0 +1,31 @@
+name: AdvancedPaintball
+version: 1.0.0
+main: com.soyadrianyt001.advancedpaintball.AdvancedPaintball
+api-version: "1.21"
+description: "AdvancedPaintball Premium - by SoyAdrianYT001"
+author: SoyAdrianYT001
+softdepend: [Citizens]
+commands:
+  pa:
+    description: Comando principal
+    usage: /pa
+    aliases: [paintball, apb]
+    permission: advancedpaintball.play
+  pa-admin:
+    description: Admin AdvancedPaintball
+    usage: /pa-admin
+    aliases: [paadmin]
+    permission: advancedpaintball.admin
+permissions:
+  advancedpaintball.play:
+    default: true
+  advancedpaintball.admin:
+    default: op
+  advancedpaintball.vip:
+    default: false
+  advancedpaintball.*:
+    default: op
+    children:
+      advancedpaintball.play: true
+      advancedpaintball.admin: true
+      advancedpaintball.vip: true
